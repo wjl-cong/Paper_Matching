@@ -105,7 +105,7 @@ class JournalService:
     # =========================================================================
 
     def fetch_papers_from_openalex(self, issn: str, journal_name: str,
-                                   max_papers: int = 50,
+                                   max_papers: int = 1,
                                    language: str = None) -> List[Paper]:
         """
         从OpenAlex获取期刊论文
@@ -137,15 +137,21 @@ class JournalService:
             # - 不同字段用分号分隔（AND关系）
             # 注意：host_venue.issn 可能需要改为 source.issn 或其他格式
 
-            # 构建过滤器 - 使用分号分隔不同字段（AND关系）
-            # OpenAlex 的 ISSN 过滤字段是 locations.source.issn
+            import datetime
+            current_year = datetime.datetime.now().year
+            # 扩大年份范围：优先当年，其次前1年，再前2年
+            # 中文期刊在OpenAlex上可能尚未收录2026年论文
+            year_filters = []
+            for year_offset in range(3):
+                year = current_year - year_offset
+                year_filters.append(f"publication_year:{year}")
+            year_filter = ",".join(year_filters)  # OR关系：当年或前两年
+
             filters = [
                 f"locations.source.issn:{issn}",
                 "type:article",
-                "publication_year:2025",
-                "from_publication_date:2025-01-01"
+                year_filter,  # 扩大范围
             ]
-
             # 如果指定了语言，添加语言筛选
             if language:
                 filters.append(f"language:{language}")
@@ -285,13 +291,26 @@ class JournalService:
             # 提取URL
             url = work.get("doi") or primary_location.get("landing_page_url")
 
-            # 提取关键词
+            # 提取关键词：优先从 concepts 取（OpenAlex主要字段），其次从 keywords 取
             keywords = []
-            for kw in work.get("keywords", [])[:10]:  # 最多10个关键词
-                if isinstance(kw, dict):
-                    keywords.append(kw.get("display_name", ""))
-                elif isinstance(kw, str):
-                    keywords.append(kw)
+            # 方式1：从 concepts 取（这是OpenAlex的主要概念字段）
+            for concept in work.get("concepts", [])[:10]:
+                if isinstance(concept, dict):
+                    level = concept.get("level", 99)
+                    # 只取具体概念（level 1-2 较具体，level 0 较宽泛）
+                    if level <= 2:
+                        kw = concept.get("display_name", "")
+                        if kw:
+                            keywords.append(kw)
+            # 方式2：如果 concepts 为空，从 keywords 取
+            if not keywords:
+                for kw in work.get("keywords", [])[:10]:
+                    if isinstance(kw, dict):
+                        keywords.append(kw.get("display_name", ""))
+                    elif isinstance(kw, str):
+                        keywords.append(kw)
+            # 去重
+            keywords = list(dict.fromkeys(keywords))[:10]
 
             # 判断语言：从标题检测（中文标点或CJK字符）
             title = work.get("display_name", "")
@@ -758,28 +777,24 @@ class JournalService:
         name = journal.name
         is_chinese_journal = journal.country == "CN"
 
-        # 根据参数或期刊类型确定目标语言
-        # 国内期刊：优先获取中文论文
-        # 国际期刊：优先获取英文论文
-        if language:
-            target_language = language
-        else:
-            target_language = "zh" if is_chinese_journal else "en"
+        # 传递 language 参数，由调用方决定：
+        # - cli.py 调用时 language=None，获取该期刊最新1篇论文（不区分语言）
+        # - 其他场景可传入 "zh" 或 "en" 限制语言
 
         # 首先尝试OpenAlex按ISSN搜索
-        print(f"尝试从OpenAlex获取 (ISSN: {issn}, 语言: {target_language})...")
+        print(f"尝试从OpenAlex获取 (ISSN: {issn})...")
         try:
             papers = self._throttled_request(
                 "openalex",
                 self.fetch_papers_from_openalex,
-                issn, name, max_papers, target_language
+                issn, name, max_papers, language
             )
         except Exception as e:
             print(f"  OpenAlex请求失败: {e}")
             papers = []
 
-        # 如果获取数量不足，补充获取（不加语言限制）
-        if len(papers) < max_papers:
+        # 如果需要补充获取（language=None 时不补充，保持只获取最新论文）
+        if len(papers) < max_papers and language is not None:
             remaining = max_papers - len(papers)
             print(f"  获取到 {len(papers)} 篇，补充获取 {remaining} 篇...")
             try:
@@ -828,7 +843,8 @@ class JournalService:
         return [], "None"
 
     def _fetch_papers_by_journal_name(self, journal_name: str,
-                                      max_papers: int = 50) -> List[Paper]:
+                                      max_papers: int = 50,
+                                      year_range: int = 5) -> List[Paper]:
         """
         通过期刊名称搜索论文（兜底策略）
 
@@ -837,6 +853,7 @@ class JournalService:
         Args:
             journal_name: 期刊名称
             max_papers: 最大获取数量
+            year_range: 往前搜索的年份范围（默认5年，覆盖近期论文）
 
         Returns:
             Paper对象列表
@@ -845,17 +862,21 @@ class JournalService:
         page = 1
         per_page = 50
 
-        # URL编码期刊名称
-        encoded_name = quote(journal_name)
-
         while len(papers) < max_papers:
+            # URL编码期刊名称
             encoded_name = quote(journal_name)
-            # 构建过滤器 - 使用分号分隔不同字段（AND关系）
-            # OpenAlex 的 display_name 过滤字段是 display_name
+            # 构建过滤器 - 扩大年份范围，中文顶刊数据量有限
+            import datetime
+            current_year = datetime.datetime.now().year
+            year_filters = [f"publication_year:{current_year - y}" for y in range(year_range)]
+            year_filter = ",".join(year_filters)
+
+            # 使用正确的 OpenAlex 字段名
+            # display_name.search 用于全文搜索期刊名称
             filters = [
-                f"display_name:{encoded_name}",
+                f"display_name.search:{encoded_name}",
                 "type:article",
-                "from_publication_date:2025-01-01"
+                year_filter,
             ]
             filter_str = ";".join(filters)
 
@@ -882,7 +903,9 @@ class JournalService:
                     # 检查来源名称是否匹配（更严格）
                     source = item.get("primary_location", {}).get("source", {})
                     source_name = source.get("display_name", "")
-                    if journal_name.lower() not in source_name.lower():
+                    # 使用宽松的匹配：期刊名包含在来源名中，或来源名包含期刊名
+                    if not (journal_name.lower() in source_name.lower() or 
+                            source_name.lower() in journal_name.lower()):
                         continue
 
                     paper = self._parse_openalex_work(item, journal_name, "")

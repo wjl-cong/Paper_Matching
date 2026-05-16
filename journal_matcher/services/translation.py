@@ -23,10 +23,13 @@ import time
 import re
 from typing import Optional
 
-# LibreTranslate 后端（开源免费）
+# Google Translate（免费，无需 API Key）
+GOOGLE_TRANSLATE_URL = "https://translate.googleapis.com/translate_a/single"
+
+# LibreTranslate 后端（需要 API Key）
 LIBRE_TRANSLATE_URL = "https://libretranslate.com"
 
-# 备用：有道翻译 API（免费）
+# 有道翻译 API
 YOUDAO_URL = "https://fanyi.youdao.com/translate"
 
 
@@ -76,6 +79,11 @@ class TranslationService:
         if src_code == tgt_code:
             return None
 
+        # 尝试 Google Translate（免费，无需 API Key）
+        result = self._try_google(text, src_code, tgt_code)
+        if result:
+            return result
+
         # 尝试 LibreTranslate
         result = self._try_libretranslate(text, src_code, tgt_code)
         if result:
@@ -98,6 +106,48 @@ class TranslationService:
         if code in ("en", "eng"):
             return "en"
         return code
+
+    def _try_google(self, text: str, src: str, tgt: str) -> Optional[str]:
+        """尝试 Google Translate（免费，无需 API Key）"""
+        import requests
+        import urllib.parse
+        import warnings
+
+        # 禁用 SSL 警告
+        warnings.filterwarnings("ignore", message="Unverified HTTPS request")
+
+        try:
+            # Google Translate 参数
+            params = {
+                "client": "gtx",
+                "sl": src if src != "auto" else "auto",
+                "tl": tgt,
+                "dt": "t",
+                "q": text
+            }
+
+            url = f"{GOOGLE_TRANSLATE_URL}?{urllib.parse.urlencode(params)}"
+
+            response = requests.get(url, timeout=30, verify=False)
+
+            if response.status_code == 200:
+                data = response.json()
+                # Google Translate 返回格式:
+                # [[translations], null, src_lang, ...]
+                # 其中 translations = [[translated_text, original_text, ...], ...]
+                if data and isinstance(data, list) and len(data) > 0:
+                    translations = data[0]
+                    if translations and isinstance(translations, list) and len(translations) > 0:
+                        first_translation = translations[0]
+                        if isinstance(first_translation, list) and len(first_translation) > 0:
+                            return first_translation[0]
+        except requests.exceptions.Timeout:
+            print(f"Google Translate timeout")
+        except requests.exceptions.SSLError as e:
+            print(f"Google Translate SSL error: {e}")
+        except Exception as e:
+            print(f"Google Translate error: {e}")
+        return None
 
     def _try_libretranslate(self, text: str, src: str, tgt: str) -> Optional[str]:
         """尝试 LibreTranslate"""

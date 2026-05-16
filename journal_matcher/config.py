@@ -99,6 +99,21 @@ class RetrievalConfig:
     # (1 - HYBRID_ALPHA)是BM25分数的权重
     HYBRID_ALPHA = 0.7
 
+    # ====================================
+    # 中文增强相关配置
+    # ====================================
+
+    # 是否使用 jieba 中文分词
+    # 启用后，中文分词更精准，BM25效果更好
+    # 需要安装：pip install jieba
+    USE_JIEBA_TOKENIZER = True
+
+    # 是否使用 OpenHowNet 义原扩展
+    # 启用后，可以利用义原知识库增强中文语义理解
+    # 需要安装：pip install OpenHowNet
+    # 注意：首次运行会下载数据（约200MB）
+    USE_HOWNET_EXPANSION = False
+
 
 # =============================================================================
 # API配置
@@ -159,34 +174,65 @@ class DatabaseConfig:
     # 向量计算是CPU密集型操作，缓存可以避免重复计算
     VECTOR_CACHE_TTL_DAYS = 7
 
-    # 每次抓取论文的最大数量
-    # 扩大规模以获取足够多的中英文文献
-    MAX_PAPERS_PER_JOURNAL = 200
+    # 每次抓取论文的最大数量（每个期刊只抓最新一期1篇）
+    MAX_PAPERS_PER_JOURNAL = 1
 
 
 # =============================================================================
-# 默认期刊列表
+# 经管类期刊配置（中文5本 + UTD 24本）
 # =============================================================================
 
-# 示例期刊配置：国内外各5本
-# 注意：实际面试时会由面试官指定具体期刊
+# 中文经管类期刊（ISSN可能有误，失败时会用名称搜索）
+CN_JOURNALS_MANAGEMENT = [
+    {"name": "管理世界", "issn": "1000-5935", "description": "管理学顶级期刊"},
+    {"name": "经济研究", "issn": "0577-9154", "description": "经济学顶级期刊"},
+    {"name": "管理科学学报", "issn": "1005-2542", "description": "管理科学"},
+    {"name": "中国工业经济", "issn": "1002-5502", "description": "产业经济学"},
+    {"name": "会计研究", "issn": "1003-2886", "description": "会计学"},
+]
+
+# UTD 24本期刊列表
+UTD_24_JOURNALS = [
+    # 金融 (4本)
+    {"name": "Journal of Finance", "issn": "0022-1082", "category": "Finance", "description": "JF"},
+    {"name": "Journal of Financial Economics", "issn": "0304-405X", "category": "Finance", "description": "JFE"},
+    {"name": "Review of Financial Studies", "issn": "0893-9454", "category": "Finance", "description": "RFS"},
+    {"name": "Journal of Financial and Quantitative Analysis", "issn": "0022-1090", "category": "Finance", "description": "JFQA"},
+    # 会计 (4本)
+    {"name": "Accounting Review", "issn": "0001-4826", "category": "Accounting", "description": "AR"},
+    {"name": "Journal of Accounting and Economics", "issn": "0165-4101", "category": "Accounting", "description": "JAE"},
+    {"name": "Journal of Accounting Research", "issn": "0021-8456", "category": "Accounting", "description": "JAR"},
+    {"name": "Accounting, Organizations and Society", "issn": "0361-3682", "category": "Accounting", "description": "AOS"},
+    # 管理科学 (4本)
+    {"name": "Management Science", "issn": "0025-1909", "category": "Management", "description": "MS"},
+    {"name": "Administrative Science Quarterly", "issn": "0001-8392", "category": "Management", "description": "ASQ"},
+    {"name": "Academy of Management Journal", "issn": "0001-4273", "category": "Management", "description": "AMJ"},
+    {"name": "Strategic Management Journal", "issn": "0143-2095", "category": "Management", "description": "SMJ"},
+    # 运营管理 (2本)
+    {"name": "Operations Research", "issn": "0030-364X", "category": "Operations", "description": "OR"},
+    {"name": "Manufacturing & Service Operations Management", "issn": "1523-4614", "category": "Operations", "description": "M&SOM"},
+    # 信息系统 (2本)
+    {"name": "MIS Quarterly", "issn": "0276-7783", "category": "IS", "description": "MISQ"},
+    {"name": "Information Systems Research", "issn": "1047-7047", "category": "IS", "description": "ISR"},
+    # 市场营销 (3本)
+    {"name": "Journal of Marketing", "issn": "0022-2429", "category": "Marketing", "description": "JM"},
+    {"name": "Journal of Marketing Research", "issn": "0022-2437", "category": "Marketing", "description": "JMR"},
+    {"name": "Journal of Consumer Research", "issn": "0093-5301", "category": "Marketing", "description": "JCR"},
+    # 组织行为 (2本)
+    {"name": "Academy of Management Review", "issn": "0363-7425", "category": "OB", "description": "AMR"},
+    {"name": "Organization Science", "issn": "1047-7039", "category": "OB", "description": "OS"},
+    # 经济学 (3本)
+    {"name": "American Economic Review", "issn": "0002-8282", "category": "Economics", "description": "AER"},
+    {"name": "Quarterly Journal of Economics", "issn": "0033-5533", "category": "Economics", "description": "QJE"},
+    {"name": "Journal of Political Economy", "issn": "0022-3808", "category": "Economics", "description": "JPE"},
+]
+
+# 默认期刊列表（保持兼容）
 DEFAULT_JOURNALS: Dict[str, List[Dict[str, str]]] = {
     # 国内期刊（中文为主）
-    "CN": [
-        {"name": "计算机学报", "issn": "0254-4164", "description": "中国计算机学会会刊"},
-        {"name": "软件学报", "issn": "1000-9825", "description": "中国科学院软件研究所主办"},
-        {"name": "自动化学报", "issn": "0254-4156", "description": "中国自动化学会主办"},
-        {"name": "电子学报", "issn": "0372-2112", "description": "中国电子学会主办"},
-        {"name": "通信学报", "issn": "0216-383X", "description": "中国通信学会主办"},
-    ],
+    "CN": CN_JOURNALS_MANAGEMENT,
     # 国际期刊（英文为主）
-    "INT": [
-        {"name": "Nature", "issn": "0028-0836", "description": "国际顶级综合期刊"},
-        {"name": "Science", "issn": "0036-8075", "description": "AAAS主办的综合期刊"},
-        {"name": "IEEE TPAMI", "issn": "0162-8828", "description": "IEEE模式分析与机器智能汇刊"},
-        {"name": "ACM Computing Surveys", "issn": "0360-0300", "description": "ACM计算综述"},
-        {"name": "The Lancet", "issn": "0140-6736", "description": "国际顶级医学期刊"},
-    ],
+    "INT": UTD_24_JOURNALS,
 }
 
 

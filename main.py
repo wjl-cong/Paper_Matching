@@ -106,7 +106,7 @@ def interactive_mode():
     print()
 
     # 执行搜索
-    cli.search(query=query, threshold=0.5, top_k=5, show_details=True)
+    cli.search(query=query, mode="both", threshold=None, top_k=5, show_details=True)
 
     # 询问是否继续搜索
     while True:
@@ -125,7 +125,7 @@ def interactive_mode():
             print("主题不能为空")
             continue
 
-        cli.search(query=query, threshold=0.5, top_k=5, show_details=True)
+        cli.search(query=query, mode="both", threshold=None, top_k=5, show_details=True)
 
 
 def main():
@@ -138,7 +138,10 @@ def main():
     # search 命令
     search_parser = subparsers.add_parser("search", help="检索相似论文")
     search_parser.add_argument("query", type=str, nargs="?", help="检索主题")
-    search_parser.add_argument("--threshold", type=float, default=0.5)
+    search_parser.add_argument("--mode", type=str, choices=["exact", "semantic", "both"],
+                              default="both", help="搜索模式: exact=精确搜索, semantic=语义搜索, both=综合")
+    search_parser.add_argument("--threshold", type=float, default=None,
+                              help="相似度阈值 (0.0-1.0)，默认根据模式自动设置")
     search_parser.add_argument("--top-k", type=int, default=5)
 
     # 其他命令
@@ -161,7 +164,7 @@ def main():
             # 命令行直接搜索
             cli = CLI()
             cli._ensure_initialized()
-            cli.search(args.query, threshold=args.threshold,
+            cli.search(args.query, mode=args.mode, threshold=args.threshold,
                       top_k=args.top_k, show_details=True)
         else:
             # 交互式模式

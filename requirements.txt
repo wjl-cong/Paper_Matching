@@ -31,3 +31,14 @@ deep-translator>=1.11.0
 # 项目自身
 # 注意：这个不需要安装，但为了完整性列出
 # journal-matcher @ file://./journal_matcher
+
+# ====================================
+# 中文增强相关依赖
+# ====================================
+
+# OpenHowNet：义原知识库，增强中文语义理解
+# 来源：https://github.com/thunlp/OpenHowNet
+OpenHowNet>=2.0
+
+# jieba：中文分词器，用于精准的中文文本处理
+jieba>=0.42.1

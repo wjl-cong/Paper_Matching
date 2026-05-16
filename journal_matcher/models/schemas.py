@@ -135,16 +135,22 @@ class PaperSummary(BaseModel):
     journal_name: str
     published_date: Optional[date] = None
     url: Optional[str] = None
+    authors: Optional[List[str]] = Field(default_factory=list, description="作者列表")
+    keywords: Optional[List[str]] = Field(default_factory=list, description="关键词列表")
+    abstract: Optional[str] = Field(None, description="摘要")
 
     @classmethod
-    def from_paper(cls, paper: Paper) -> "PaperSummary":
+    def from_paper(cls, paper: "Paper") -> "PaperSummary":
         """从Paper模型创建PaperSummary"""
         return cls(
             doi=paper.doi,
             title=paper.title,
             journal_name=paper.journal_name,
             published_date=paper.published_date,
-            url=paper.url
+            url=paper.url,
+            authors=paper.authors or [],
+            keywords=paper.keywords or [],
+            abstract=paper.abstract
         )
 
 
