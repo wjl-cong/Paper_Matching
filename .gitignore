@@ -1,0 +1,5 @@
+journal_matcher/models/bge-m3/
+*.bin
+*.pth
+*.h5
+__pycache__/
