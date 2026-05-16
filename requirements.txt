@@ -1,0 +1,33 @@
+# 期刊论文语义匹配系统 - 依赖包
+# ====================================
+
+# FastAPI Web框架
+fastapi>=0.104.0
+
+# ASGI服务器（运行FastAPI）
+uvicorn[standard]>=0.24.0
+
+# 数据验证
+pydantic>=2.0.0
+
+# HTTP请求库
+requests>=2.31.0
+
+# 向量化模型（sentence-transformers封装了BERT等模型）
+sentence-transformers>=2.2.2
+
+# PyTorch（sentence-transformers的依赖）
+torch>=2.0.0
+
+# 向量数据库
+faiss-cpu>=1.7.4
+
+# 注意：如果有GPU，可以安装 faiss-gpu 替代 faiss-cpu
+# pip install faiss-gpu
+
+# 翻译库（用于跨语言检索）
+deep-translator>=1.11.0
+
+# 项目自身
+# 注意：这个不需要安装，但为了完整性列出
+# journal-matcher @ file://./journal_matcher

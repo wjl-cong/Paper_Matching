@@ -1,0 +1,65 @@
+{
+  "description": "期刊配置文件 - 面试现场根据面试官提供的期刊名称修改此处",
+  "journals": [
+    {
+      "name": "期刊1名称（面试官提供）",
+      "issn": "期刊1的ISSN",
+      "country": "CN",
+      "description": "国内期刊"
+    },
+    {
+      "name": "期刊2名称（面试官提供）",
+      "issn": "期刊2的ISSN",
+      "country": "CN",
+      "description": "国内期刊"
+    },
+    {
+      "name": "期刊3名称（面试官提供）",
+      "issn": "期刊3的ISSN",
+      "country": "CN",
+      "description": "国内期刊"
+    },
+    {
+      "name": "期刊4名称（面试官提供）",
+      "issn": "期刊4的ISSN",
+      "country": "CN",
+      "description": "国内期刊"
+    },
+    {
+      "name": "期刊5名称（面试官提供）",
+      "issn": "期刊5的ISSN",
+      "country": "CN",
+      "description": "国内期刊"
+    },
+    {
+      "name": "期刊6名称（面试官提供）",
+      "issn": "期刊6的ISSN",
+      "country": "INT",
+      "description": "国际期刊"
+    },
+    {
+      "name": "期刊7名称（面试官提供）",
+      "issn": "期刊7的ISSN",
+      "country": "INT",
+      "description": "国际期刊"
+    },
+    {
+      "name": "期刊8名称（面试官提供）",
+      "issn": "期刊8的ISSN",
+      "country": "INT",
+      "description": "国际期刊"
+    },
+    {
+      "name": "期刊9名称（面试官提供）",
+      "issn": "期刊9的ISSN",
+      "country": "INT",
+      "description": "国际期刊"
+    },
+    {
+      "name": "期刊10名称（面试官提供）",
+      "issn": "期刊10的ISSN",
+      "country": "INT",
+      "description": "国际期刊"
+    }
+  ]
+}
